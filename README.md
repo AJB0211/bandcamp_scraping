@@ -4,6 +4,14 @@
 Scrape the front page of bandcamp to obtain links to current albums. Then from those albums grab relevant information as well as users that supported that album.
 
 
+
+### v1.0.0
+  * Introduced exceptions
+  * Introduced Profile spider, completed collection URL scraping
+    + BUG: Cannot expand wishlist currently. Issue with "view all..." button
+  * Refactored front page spider into class structure
+  * Version updated to reflect usable state of library
+
 ### v0.2.2
   * Restructured repo for legibility and library implementation
 
