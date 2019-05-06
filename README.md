@@ -4,6 +4,10 @@
 Scrape the front page of bandcamp to obtain links to current albums. Then from those albums grab relevant information as well as users that supported that album.
 
 
+### v0.2.1
+ * Added base spider class for driver and exception handling
+ * Finalized iteration of AlbumSpider class inheriting from Spider
+
 ### v0.1.2
  * Changed project file name for generalization
  * Added general scraping of front page suggestions URLs to dictionary
