@@ -17,8 +17,8 @@ from .Exceptions import DomainError, PageTypeException
 
 
 class ProfileSpider(Spider):
-    def __init__(self, url, driver="Chrome", verbose=False):
-        Spider.__init__(self, url=url, driver_=driver, verbose=verbose, logfile="./ProfileLog.txt")
+    def __init__(self, url, driver="Chrome", verbose=False, logfile="./ProfileLog.txt"):
+        Spider.__init__(self, url=url, driver_=driver, verbose=verbose, logfile=logfile)
         self._username = self._driver.find_element_by_xpath('//span[@data-bind="text: name"]').text
         self._collection = None                          # List of URLs of owned albums
         self._wishlist = None                            # List of URLs of albums on wishlist
@@ -151,4 +151,4 @@ class ProfileSpider(Spider):
 
     def to_csv(self,filename):
         """ Converts profile object into csv file """
-        self.asPandasSeries().to_csv(filename)
+        self.asPandasSeries().to_csv(filename, header=False)

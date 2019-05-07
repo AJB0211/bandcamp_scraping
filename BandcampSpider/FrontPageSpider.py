@@ -20,8 +20,8 @@ from .Exceptions import DomainError, PageTypeException
 
 
 class FrontPageSpider(Spider):
-    def __init__(self,genres, categories, driver_="Chrome",verbose=False):
-        Spider.__init__(self, url="https://bandcamp.com", driver_=driver_,verbose=verbose, logfile="./frontPageLog.txt")
+    def __init__(self,genres, categories, driver_="Chrome",verbose=False, logfile="./frontPageLog.txt"):
+        Spider.__init__(self, url="https://bandcamp.com", driver_=driver_,verbose=verbose, logfile=logfile)
 
         self._genres = genres
         self._categories = categories
@@ -72,12 +72,13 @@ class FrontPageSpider(Spider):
                     waiter = WebDriverWait(self._driver, pageWaitTime)
                     dummy = waiter.until(EC.visibility_of_element_located((By.XPATH, '//a[@class="item-title"]')))
                 except Exception as e:
-                    self._loadHandler(f'({genre},{category})',e)
+                    self._loadHandler(f'({genre},{category})',e,0)
                     continue
 
                 
                 # Click through to load all suggestions
-                counter = 0
+                counter = 1
+                agg = []
                 while(True and counter < pageLimit):
                     try:
                         buttonTimer = WebDriverWait(self._driver,pageWaitTime)
@@ -85,15 +86,43 @@ class FrontPageSpider(Spider):
                         button.click()
                         time.sleep(pageSleepTime)
                         counter += 1
+                        # Only 3 pages worth of items stay loaded in memory at a time
+                        # Every third page we store into an aggregator
+                        if (counter%3 == 0):
+                            try:
+                                links = self._driver.find_elements_by_xpath('//a[@class="item-title"]')
+                            except Exception as e:
+                                self._exceptHandler(f'links for ({genre},{category}) on page {counter-1}',e,verbose=True)
+                                links = []
+                                break
+                            agg = agg + [re.sub("\?from.*$", "", i.get_attribute('href')) for i in links]
                     except:
                         break
-                try:
-                    links = self._driver.find_elements_by_xpath('//a[@class="item-title"]')
-                except Exception as e:
-                    self._exceptHandler(f'links for ({genre},{category}) on page {counter}',e,verbose=True)
-                    links = []
-                finally:
-                    genre_acc[category] = [re.sub("\?from.*$", "", i.get_attribute('href')) for i in links]
+                if (counter // 3 == 0):
+                    try:
+                        links = self._driver.find_elements_by_xpath('//a[@class="item-title"]')
+                        agg = agg + [re.sub("\?from.*$", "", i.get_attribute('href')) for i in links]
+                    except Exception as e:
+                        # Here the page is indexed by the URL
+                        self._exceptHandler(f'links for ({genre},{category}) on page {counter-1}',e,verbose=True)
+                        # links = []
+                elif (counter % 3 == 1):
+                    try:
+                        links = self._driver.find_elements_by_xpath('//a[@class="item-title"]')
+                        agg = agg + [re.sub("\?from.*$", "", i.get_attribute('href')) for i in links[16:]]
+                    except Exception as e:
+                        # Here the page is indexed by the URL
+                        self._exceptHandler(f'links for ({genre},{category}) on page {counter-1}',e,verbose=True)
+                        # links = []
+                elif (counter % 3 == 2):
+                    try:
+                        links = self._driver.find_elements_by_xpath('//a[@class="item-title"]')
+                        agg = agg + [re.sub("\?from.*$", "", i.get_attribute('href')) for i in links[8:]]
+                    except Exception as e:
+                        # Here the page is indexed by the URL
+                        self._exceptHandler(f'links for ({genre},{category}) on page {counter-1}',e,verbose=True)
+                        # links = []
+                genre_acc[category] = agg
             self._Dict[genre] = genre_acc
 
     def asDataFrame(self):

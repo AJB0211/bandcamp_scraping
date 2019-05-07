@@ -4,6 +4,14 @@
 Scrape the front page of bandcamp to obtain links to current albums. Then from those albums grab relevant information as well as users that supported that album.
 
 
+### v1.1.1
+  * Removed redundant or unnecessary files files from repo
+  * Updates to demo.ipynb
+  * Minor changes to logfile handling in constructors
+  * Bug fix in exception handler
+  * Introduced readSeries static method accessible from all classes to handle reading csv outputs to pandas.Series
+
+
 ### v1.1.0
   * Restructured to properly load as library
   * Added conversions to pandas objects and CSV files

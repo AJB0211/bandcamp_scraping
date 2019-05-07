@@ -23,8 +23,8 @@ from .SpiderClass import Spider
 from .Exceptions import DomainError, PageTypeException
 
 class AlbumSpider(Spider):
-    def __init__(self,url, driver="Chrome", verbose=False):
-        Spider.__init__(self,url=url,driver_=driver,verbose=verbose,logfile="./albumLog.txt")
+    def __init__(self, url, driver="Chrome", verbose=False, logfile="./albumLog.txt"):
+        Spider.__init__(self,url=url,driver_=driver,verbose=verbose,logfile=logfile)
         try:
             self._driver.find_element_by_xpath('//h2[@class="trackTitle"][@itemprop="name"]')
         except:
@@ -130,7 +130,7 @@ class AlbumSpider(Spider):
                 "totalDuration": self._albumDuration,
                 "releaseDate": self._releaseDate}
 
-    def __populateSupporters(self,):
+    def __populateSupporters(self,pageLimit=999):
         """ Internal get supporters from web """
         if not self._AlbumSpider__scrollBool:
             self._driver.execute_script("window.scroll(0,300)")
@@ -143,17 +143,22 @@ class AlbumSpider(Spider):
         except Exception as e:
             self._exceptHandler("reviewers",e)
         
-        while(True):
+        counter = 1
+        while(counter < pageLimit):
             try:
                 moreTimer = WebDriverWait(self._driver,3)
                 button = moreTimer.until(EC.element_to_be_clickable((By.XPATH,'//a[@class="more-thumbs"][./text()= "more..."]')))
                 button.click()
                 time.sleep(0.1)
+                counter += 1
                 #self._driver.execute_script("window.scroll(0,200)")
             except NoSuchElementException:
                 break
+            except TimeoutException:
+                break
             except Exception as e:
                 self._exceptHandler("more supporters",e,verbose=True)
+                break
         try:
             reviewers = self._driver.find_elements_by_xpath('//a[@class="pic"]')
             supporters = self._driver.find_elements_by_xpath('//a[@class="fan pic"]')
@@ -161,10 +166,10 @@ class AlbumSpider(Spider):
         except Exception as e:
             self._exceptHandler("supporters",e,verbose=True)
 
-    def getSupporters(self,count=None, reset=False):
+    def getSupporters(self,pageLimit=999,reset=False):
         """ External getter for supporters URL list """
         if self._AlbumSpider__supporters == None or reset:
-            self._AlbumSpider__supporters = self._AlbumSpider__populateSupporters()
+            self._AlbumSpider__supporters = self._AlbumSpider__populateSupporters(pageLimit=pageLimit)
         return self._AlbumSpider__supporters.copy()
 
 
@@ -188,7 +193,7 @@ class AlbumSpider(Spider):
         except NoSuchElementException:
             pass
         except Exception as e:
-            self._Spider__exceptHandler("reviewers", e)
+            self._exceptHandler("reviewers", e)
 
         reviews = self._driver.find_elements_by_xpath('//div[@class="writing"]')
 
@@ -209,25 +214,25 @@ class AlbumSpider(Spider):
         return [reviewCleaner(i) for i in reviews]
 
 
-        def getAsDict(self):
-            out_dict = self.getAlbumDetails()
-            if self._reviews == None:
-                out_dict["reviews"] = ""
-            else:
-                out_dict["reviews"] = ",".join(self._reviews)
-            if self._supporters == None:
-                out_dict["supporters"] = ""
-            else:
-                out_dict["supporters"] = ",".join(self._supporters)
+    def getAsDict(self):
+        out_dict = self.getAlbumDetails()
+        if self._AlbumSpider__reviews == None:
+            out_dict["reviews"] = ""
+        else:
+            out_dict["reviews"] = "|&|".join([f'{i["reviewer"]}:::{i["favoriteTrack"]}:::{i["review"]}' for i in self._AlbumSpider__reviews])
+        if self._AlbumSpider__supporters == None:
+            out_dict["supporters"] = ""
+        else:
+            out_dict["supporters"] = ",".join(self._AlbumSpider__supporters)
 
-            return out_dict
+        return out_dict
 
 
-        def asPandasSeries(self):
-            return pd.Series(self.getAsDict())
+    def asPandasSeries(self):
+        return pd.Series(self.getAsDict())
 
-        def to_csv(self,filename):
-            return self.asPandasSeries().to_csv(filename)
+    def to_csv(self,filename):
+        return self.asPandasSeries().to_csv(filename)
 
             
 
