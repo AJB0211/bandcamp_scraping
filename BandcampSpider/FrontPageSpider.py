@@ -1,8 +1,5 @@
 # This spider harvests URLs from the suggestions box about halfway down the page
 
-
-from exceptions import DomainError, PageTypeException
-from SpiderClass import Spider
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import StaleElementReferenceException
@@ -13,28 +10,38 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 import time
 import re
+import pandas as pd
+import numpy as np
 
 
-from SpiderClass import Spider
-from exceptions import DomainError, PageTypeException
+from .SpiderClass import Spider
+from .Exceptions import DomainError, PageTypeException
 
 
 
 class FrontPageSpider(Spider):
-    def __init__(self,genres, categories, url="https://bandcamp.com",driver_="Chrome",verbose=False):
-        Spider.__init__(self, url=url, driver_=driver_,verbose=verbose, logfile="./frontPageLog.txt")
-
-        # These should be reimplemented to be available as class method 
-        # if categories is recommended append "&r=most" to URL
-        self.categoryOptions = ["top", "new", "rec"]
-        self.genreOptions = ["electronic", "rock", "metal", "alternative", "hip-hop-rap", "experimental", "punk", "folk", "pop", "ambient", "soundtrack",
-                                "world", "jazz", "acoustic", "funk", "r-b-soul", "devotional", "classical", "reggae", "podcasts", "country", "spoken-word",
-                                "comedy", "blues", "kids", "audiobooks", "latin"]
+    def __init__(self,genres, categories, driver_="Chrome",verbose=False):
+        Spider.__init__(self, url="https://bandcamp.com", driver_=driver_,verbose=verbose, logfile="./frontPageLog.txt")
 
         self._genres = genres
         self._categories = categories
         self._Dict = None
         
+
+    @staticmethod
+    def getCategoryOptions():
+        """ Static method to list options for categories to search
+            Only 'top' and 'new' are currently functional """
+        # if categories is recommended append "&r=most" to URL
+        return ["top", "new", "rec"]
+
+    @staticmethod
+    def getGenreOptions():
+        """ Static method to list genre options available to scrape
+            on front page """
+        return ["electronic", "rock", "metal", "alternative", "hip-hop-rap", "experimental", "punk", "folk", "pop", "ambient", "soundtrack",
+                "world", "jazz", "acoustic", "funk", "r-b-soul", "devotional", "classical", "reggae", "podcasts", "country", "spoken-word",
+                "comedy", "blues", "kids", "audiobooks", "latin"]
         
     def printURLs(self):
         for genre,cat_dict in self._Dict.items():
@@ -42,9 +49,9 @@ class FrontPageSpider(Spider):
                 for i,j in enumerate(url_list):
                     print(f'({genre},{cat}) {i}:  {j}')
 
-    def getURLs(self, reset=False):
+    def getURLs(self, pageWaitTime=3, pageSleepTime=0.5, pageLimit=999, reset=False):
         if self._Dict == None or reset:
-            self._populateDict()
+            self._populateDict(pageWaitTime=pageWaitTime,pageSleepTime = pageSleepTime, pageLimit=pageLimit)
         return self._Dict.copy()
 
 
@@ -89,17 +96,19 @@ class FrontPageSpider(Spider):
                     genre_acc[category] = [re.sub("\?from.*$", "", i.get_attribute('href')) for i in links]
             self._Dict[genre] = genre_acc
 
+    def asDataFrame(self):
+        def arrayGen(d):
+            for genre, cat_dict in d.items():
+                for category, url_list in cat_dict.items():
+                    for i in url_list:
+                        yield [genre,category,i]
+        
+        return pd.DataFrame(np.array(list(arrayGen(self._Dict))), 
+                columns = ["genre","category","url"])
 
 
-albumList = []
-# change to 200 for use
-test_cat = ["top"]
-test_gen = ["audiobooks"]
+    def to_csv(self, fileName):
+        """ Outputs URLs gathered to CSV """
+        self.asDataFrame().to_csv(fileName,index=False)
 
 
-test = FrontPageSpider(genres = test_gen,categories = test_cat)
-
-test._populateDict()
-test.printURLs()
-
-del test

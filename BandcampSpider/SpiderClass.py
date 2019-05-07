@@ -1,7 +1,7 @@
 from selenium import webdriver
 import re
 
-from exceptions import DomainError,PageTypeException
+from .Exceptions import DomainError,PageTypeException
 
 class Spider(object):
     def __init__(self,url,driver_="Chrome",verbose=False,logfile="./log.txt"):

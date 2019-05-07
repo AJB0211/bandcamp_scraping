@@ -4,6 +4,12 @@
 Scrape the front page of bandcamp to obtain links to current albums. Then from those albums grab relevant information as well as users that supported that album.
 
 
+### v1.1.0
+  * Restructured to properly load as library
+  * Added conversions to pandas objects and CSV files
+  * Added wait timer and page number arguements to scraping operations
+  * Test files
+  * Demo
 
 ### v1.0.0
   * Introduced exceptions

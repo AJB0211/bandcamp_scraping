@@ -9,6 +9,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 import time
 from datetime import timedelta
 import re
+import pandas as pd
 
 
 # release date
@@ -18,8 +19,8 @@ import re
 
 
 
-from SpiderClass import Spider
-from exceptions import DomainError, PageTypeException
+from .SpiderClass import Spider
+from .Exceptions import DomainError, PageTypeException
 
 class AlbumSpider(Spider):
     def __init__(self,url, driver="Chrome", verbose=False):
@@ -129,7 +130,7 @@ class AlbumSpider(Spider):
                 "totalDuration": self._albumDuration,
                 "releaseDate": self._releaseDate}
 
-    def __populateSupporters(self):
+    def __populateSupporters(self,):
         """ Internal get supporters from web """
         if not self._AlbumSpider__scrollBool:
             self._driver.execute_script("window.scroll(0,300)")
@@ -208,40 +209,30 @@ class AlbumSpider(Spider):
         return [reviewCleaner(i) for i in reviews]
 
 
+        def getAsDict(self):
+            out_dict = self.getAlbumDetails()
+            if self._reviews == None:
+                out_dict["reviews"] = ""
+            else:
+                out_dict["reviews"] = ",".join(self._reviews)
+            if self._supporters == None:
+                out_dict["supporters"] = ""
+            else:
+                out_dict["supporters"] = ",".join(self._supporters)
 
-#### Below is for testing
-
-
-## Example of sale but not digital sale
-# testURL = "https://septicflesh.bandcamp.com/album/titan"
-## Example of only merch
-# testURL = "https://septicflesh.bandcamp.com/album/codex-omega"
-
-# testURL = "https://deathspellomega.bandcamp.com/album/the-furnaces-of-palingenesia"
-
-# testURL = "https://archivistmusic.bandcamp.com/album/construct"
-# testURL = "https://comebackkid-hc.bandcamp.com/"
-testURL = "https://aenimus.bandcamp.com/"
-
-## Example of song over an hour
-# testURL = "https://bellwitch.bandcamp.com/album/mirror-reaper"
-
-# testURL = "https://bandcamp.com"
-
-test = AlbumSpider(testURL)
-
-testDict = test.getAlbumDetails()
-for i,j in testDict.items():
-    print(f'{i} : {j}')
-
-# for d in test.getReviews():
-#     for i,j in d.items():
-#         print(f'{i}:{j}')
-#     print('\n\n')
+            return out_dict
 
 
-# for i in test.getSupporters():
-#     print(i)
+        def asPandasSeries(self):
+            return pd.Series(self.getAsDict())
+
+        def to_csv(self,filename):
+            return self.asPandasSeries().to_csv(filename)
+
+            
+
+            
 
 
-del test
+
+

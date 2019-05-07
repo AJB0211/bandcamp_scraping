@@ -1,4 +1,3 @@
-from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support.ui import WebDriverWait
@@ -9,11 +8,11 @@ from selenium.webdriver.common.action_chains import ActionChains
 import time
 from datetime import timedelta
 import re
+import numpy as np
+import pandas as pd
 
-
-from SpiderClass import Spider
-
-
+from .SpiderClass import Spider
+from .Exceptions import DomainError, PageTypeException
 
 
 
@@ -43,7 +42,25 @@ class ProfileSpider(Spider):
     def getUsername(self):
         return self._username
 
-    def _scrollMe(self,target,scroller,pageNum="All"):
+    def getAsDict(self):
+        if self._collection == None:
+            out_collection = ""
+        else:
+            out_collection = ",".join(self._collection)
+        if self._wishlist == None:
+            out_wishlist = ""
+        else:
+            out_wishlist = ",".join(self._wishlist)
+        return {"username": self._username,
+                 "collectionSize": self._collectionSize,
+                 "wishlistSize": self._wishlistSize,
+                 "followers": self._numFollowers,
+                 "following": self._numFollowing,
+                 "collection": out_collection,
+                 "wishlist": out_wishlist
+                 }
+
+    def _scrollMe(self,target,scroller,stopTime=2,pageNum="All"):
         """ Used to scroll down to load dynamic page elements """
         floor = self._driver.find_element_by_xpath('//div[@id="pgFt"]')
         self._driver.execute_script("arguments[0].scrollIntoView(true);", floor)
@@ -71,9 +88,9 @@ class ProfileSpider(Spider):
             except Exception as e:
                 print(e)
                 break
-            time.sleep(0.5)
+            time.sleep(stopTime/2.0)
             self._driver.execute_script("arguments[0].scrollIntoView(true);",floor)
-            time.sleep(0.5)
+            time.sleep(stopTime/2.0)
             new_count = len(self._driver.find_elements_by_xpath(target))
             if new_count == old_count:
                 break
@@ -84,29 +101,29 @@ class ProfileSpider(Spider):
 
 
 
-    def _populateCollection(self,pageNum="All",verbose=False):
+    def _populateCollection(self,stopTime=2,pageNum=999,verbose=False):
         """ Internal setter for getting items in a user's collection as a list of URLs"""
         if self._collectionSize == 0:
             self._collection = []
         self._driver.get(self._url)
         if self._collectionSize > 40:
             target = '//li[@class="collection-item-container track_play_hilite"]'
-            self._scrollMe(target=target,scroller='//button[@class="show-more"]', pageNum=pageNum)
+            self._scrollMe(target=target,scroller='//button[@class="show-more"]', pageNum=pageNum,stopTime=stopTime)
         else:
             target = '//li[@class = "collection-item-container track_play_hilite   "]'
         items = self._driver.find_elements_by_xpath(target+'//div[@class="collection-title-details"]//a[@class="item-link"]')
         self._collection = [i.get_attribute('href') for i in items]
 
 
-    def getCollection(self, reset = False):
+    def getCollection(self, stopTime=2, pageNum=999, reset = False):
         """ External getter for collection as a list of URLs """
         if self._collection == None or reset:
-            self._populateCollection(pageNum=5)
+            self._populateCollection(stopTime = stopTime,pageNum=pageNum)
         return self._collection.copy()
 
 
     ### Currently the button for the wishlist is not clickable. Unsure of why. Fix in future update
-    def _populateWishlist(self,pageNum="All",verbose=False):
+    def _populateWishlist(self,pageNum=999,verbose=False):
         """ Internal setter for getting items in a user's wishlist as a list of URLs"""
         if self._wishlistSize == 0:
             self._wishlist = []
@@ -128,22 +145,10 @@ class ProfileSpider(Spider):
         return self._wishlist.copy()
 
 
-test_URL = "https://bandcamp.com/AJB0211"
-# test_URL = "https://bandcamp.com/stevenvlass"
+    def asPandasSeries(self):
+        """ Converts profile object into pandas Series """
+        return pd.Series(self.getAsDict())
 
-test = ProfileSpider(test_URL)
-
-
-# print(test._collectionSize)
-# print(test._wishlistSize)
-# print(test._numFollowers)
-# print(test._numFollowing)
-
-# for i in test.getCollection():
-#     print(i)
-
-
-for i in test.getWishlist():
-    print(i)
-
-del test
+    def to_csv(self,filename):
+        """ Converts profile object into csv file """
+        self.asPandasSeries().to_csv(filename)
